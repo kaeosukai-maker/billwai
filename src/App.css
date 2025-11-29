@@ -79,7 +79,7 @@
 
 /* Main Content */
 .main-content {
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 24px 16px;
 }
@@ -175,9 +175,17 @@
   font-size: 1rem;
 }
 
-.card-icon.blue { background: #dbeafe; }
-.card-icon.amber { background: #fef3c7; }
-.card-icon.purple { background: #ede9fe; }
+.card-icon.blue {
+  background: #dbeafe;
+}
+
+.card-icon.amber {
+  background: #fef3c7;
+}
+
+.card-icon.purple {
+  background: #ede9fe;
+}
 
 /* Form Elements */
 .form-group {
@@ -225,6 +233,7 @@
 }
 
 @media (max-width: 640px) {
+
   .form-row,
   .form-grid-3 {
     grid-template-columns: 1fr;
@@ -796,6 +805,7 @@
 
 /* Print Styles */
 @media print {
+
   .header,
   .doc-type-selector,
   .tab-nav,
@@ -805,11 +815,11 @@
   .btn-secondary.full-width {
     display: none !important;
   }
-  
+
   .app-container {
     background: white;
   }
-  
+
   .invoice-preview {
     box-shadow: none;
     border-radius: 0;
