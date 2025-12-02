@@ -1,72 +1,37 @@
-import { useState } from 'react'
+// src/App.jsx
+import { useState, useEffect } from 'react'
+import { AuthProvider, useAuth } from './context/AuthContext'
+import AuthModal from './components/AuthModal'
+import { 
+  getDocuments, 
+  createDocument, 
+  updateDocument, 
+  deleteDocument,
+  generateShareToken,
+  generateDocNumber,
+  getClients,
+  createClient as createClientDB
+} from './lib/supabase'
+import { exportPdfFromElement, bahtText, formatNumber, formatThaiDate } from './utils/pdfExport'
 import './App.css'
 
-// ฟังก์ชันแปลงตัวเลขเป็นคำอ่านภาษาไทย (BahtText)
-const bahtText = (number) => {
-  const thaiNumbers = ['', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า'];
-  const thaiUnits = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน', 'ล้าน'];
+// ============================================
+// Main App Component
+// ============================================
+function AppContent() {
+  const { user, profile, loading, signOut, saveProfile, isAuthenticated } = useAuth()
   
-  if (number === 0) return 'ศูนย์บาทถ้วน';
-  if (number < 0) return 'ลบ' + bahtText(Math.abs(number));
-  
-  const num = Math.abs(number);
-  const intPart = Math.floor(num);
-  const decPart = Math.round((num - intPart) * 100);
-  
-  const convertGroup = (n) => {
-    if (n === 0) return '';
-    let result = '';
-    const str = n.toString();
-    const len = str.length;
-    
-    for (let i = 0; i < len; i++) {
-      const digit = parseInt(str[i]);
-      const unit = len - i - 1;
-      
-      if (digit !== 0) {
-        if (unit === 1 && digit === 2) {
-          result += 'ยี่สิบ';
-        } else if (unit === 1 && digit === 1) {
-          result += 'สิบ';
-        } else if (unit === 0 && digit === 1 && len > 1) {
-          result += 'เอ็ด';
-        } else {
-          result += thaiNumbers[digit] + thaiUnits[unit];
-        }
-      }
-    }
-    return result;
-  };
-  
-  let result = '';
-  
-  if (intPart >= 1000000) {
-    const millions = Math.floor(intPart / 1000000);
-    result += convertGroup(millions) + 'ล้าน';
-    const remainder = intPart % 1000000;
-    if (remainder > 0) {
-      result += convertGroup(remainder);
-    }
-  } else {
-    result = convertGroup(intPart);
-  }
-  
-  result += 'บาท';
-  
-  if (decPart === 0) {
-    result += 'ถ้วน';
-  } else {
-    result += convertGroup(decPart) + 'สตางค์';
-  }
-  
-  return result;
-};
-
-function App() {
-  const [activeTab, setActiveTab] = useState('create');
-  const [docType, setDocType] = useState('quotation');
-  const [savedLink, setSavedLink] = useState('');
-  const [showSettings, setShowSettings] = useState(false);
+  const [activeTab, setActiveTab] = useState('create')
+  const [docType, setDocType] = useState('quotation')
+  const [savedLink, setSavedLink] = useState('')
+  const [showSettings, setShowSettings] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+  const [documents, setDocuments] = useState([])
+  const [clients, setClients] = useState([])
+  const [saving, setSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [currentDocId, setCurrentDocId] = useState(null)
   
   // ข้อมูลบริษัท/ฟรีแลนซ์
   const [companyInfo, setCompanyInfo] = useState({
@@ -75,9 +40,8 @@ function App() {
     phone: '',
     email: '',
     taxId: '',
-    logo: null,
     themeColor: '#059669'
-  });
+  })
   
   // ข้อมูลลูกค้า
   const [clientInfo, setClientInfo] = useState({
@@ -86,85 +50,308 @@ function App() {
     phone: '',
     email: '',
     taxId: ''
-  });
+  })
   
   // รายการสินค้า/บริการ
   const [items, setItems] = useState([
     { id: 1, description: '', quantity: 1, price: 0 }
-  ]);
+  ])
   
   // ตัวเลือกภาษี
   const [taxOptions, setTaxOptions] = useState({
     includeVat: false,
     withholding: 'none'
-  });
+  })
   
   // ข้อมูลเอกสาร
   const [docInfo, setDocInfo] = useState({
-    docNumber: `QT-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}001`,
+    docNumber: '',
     date: new Date().toISOString().split('T')[0],
     dueDate: '',
     note: ''
-  });
+  })
+
+  // โหลดข้อมูลเมื่อ login
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      loadUserData()
+    }
+  }, [isAuthenticated, user])
+
+  // โหลด profile ลง companyInfo
+  useEffect(() => {
+    if (profile) {
+      setCompanyInfo({
+        name: profile.name || '',
+        address: profile.address || '',
+        phone: profile.phone || '',
+        email: profile.email || '',
+        taxId: profile.tax_id || '',
+        themeColor: profile.theme_color || '#059669'
+      })
+    }
+  }, [profile])
+
+  // สร้างเลขที่เอกสารใหม่เมื่อเปลี่ยนประเภท
+  useEffect(() => {
+    if (isAuthenticated && user && !currentDocId) {
+      generateNewDocNumber()
+    }
+  }, [docType, isAuthenticated, user])
+
+  const generateNewDocNumber = async () => {
+    if (!user) return
+    const newNumber = await generateDocNumber(user.id, docType)
+    setDocInfo(prev => ({ ...prev, docNumber: newNumber }))
+  }
+
+  const loadUserData = async () => {
+    if (!user) return
+    
+    // โหลดเอกสาร
+    const { data: docs } = await getDocuments(user.id)
+    setDocuments(docs || [])
+    
+    // โหลดลูกค้า
+    const { data: clientsData } = await getClients(user.id)
+    setClients(clientsData || [])
+    
+    // สร้างเลขที่เอกสารใหม่
+    generateNewDocNumber()
+  }
 
   // คำนวณยอดรวม
   const calculateTotals = () => {
-    const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-    const vat = taxOptions.includeVat ? subtotal * 0.07 : 0;
-    const totalBeforeWithholding = subtotal + vat;
+    const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0)
+    const vat = taxOptions.includeVat ? subtotal * 0.07 : 0
+    const totalBeforeWithholding = subtotal + vat
     
-    let withholdingRate = 0;
-    if (taxOptions.withholding === '1') withholdingRate = 0.01;
-    if (taxOptions.withholding === '3') withholdingRate = 0.03;
+    let withholdingRate = 0
+    if (taxOptions.withholding === '1') withholdingRate = 0.01
+    if (taxOptions.withholding === '3') withholdingRate = 0.03
     
-    const withholdingAmount = subtotal * withholdingRate;
-    const netTotal = totalBeforeWithholding - withholdingAmount;
+    const withholdingAmount = subtotal * withholdingRate
+    const netTotal = totalBeforeWithholding - withholdingAmount
     
-    return { subtotal, vat, withholdingAmount, withholdingRate, netTotal, totalBeforeWithholding };
-  };
+    return { subtotal, vat, withholdingAmount, withholdingRate, netTotal, totalBeforeWithholding }
+  }
 
-  const totals = calculateTotals();
+  const totals = calculateTotals()
 
   // เพิ่มรายการ
   const addItem = () => {
-    setItems([...items, { id: Date.now(), description: '', quantity: 1, price: 0 }]);
-  };
+    setItems([...items, { id: Date.now(), description: '', quantity: 1, price: 0 }])
+  }
 
   // ลบรายการ
   const removeItem = (id) => {
     if (items.length > 1) {
-      setItems(items.filter(item => item.id !== id));
+      setItems(items.filter(item => item.id !== id))
     }
-  };
+  }
 
   // อัพเดทรายการ
   const updateItem = (id, field, value) => {
     setItems(items.map(item => 
       item.id === id ? { ...item, [field]: value } : item
-    ));
-  };
+    ))
+  }
+
+  // บันทึกเอกสาร
+  const saveDocument = async () => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true)
+      return
+    }
+
+    setSaving(true)
+    
+    const docData = {
+      user_id: user.id,
+      doc_type: docType,
+      doc_number: docInfo.docNumber,
+      doc_date: docInfo.date,
+      due_date: docInfo.dueDate || null,
+      client_name: clientInfo.name,
+      client_address: clientInfo.address,
+      client_phone: clientInfo.phone,
+      client_tax_id: clientInfo.taxId,
+      items: items,
+      include_vat: taxOptions.includeVat,
+      withholding_tax: taxOptions.withholding,
+      subtotal: totals.subtotal,
+      vat_amount: totals.vat,
+      withholding_amount: totals.withholdingAmount,
+      net_total: totals.netTotal,
+      note: docInfo.note,
+      status: 'draft'
+    }
+
+    try {
+      if (currentDocId) {
+        // อัพเดทเอกสารเดิม
+        const { data, error } = await updateDocument(currentDocId, docData)
+        if (error) throw error
+        setDocuments(docs => docs.map(d => d.id === currentDocId ? data : d))
+        alert('บันทึกสำเร็จ!')
+      } else {
+        // สร้างเอกสารใหม่
+        const { data, error } = await createDocument(docData)
+        if (error) throw error
+        setCurrentDocId(data.id)
+        setDocuments(docs => [data, ...docs])
+        alert('สร้างเอกสารสำเร็จ!')
+      }
+    } catch (error) {
+      console.error('Save error:', error)
+      alert('เกิดข้อผิดพลาด: ' + error.message)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   // สร้างลิงก์แชร์
-  const generateShareLink = () => {
-    const docId = Date.now();
-    setSavedLink(`https://billwai.com/view/${docId}`);
-  };
+  const handleGenerateShareLink = async () => {
+    if (!currentDocId) {
+      // บันทึกก่อนถ้ายังไม่ได้บันทึก
+      await saveDocument()
+    }
 
-  // Format number
-  const formatNumber = (num) => {
-    return new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
-  };
+    if (!currentDocId) {
+      alert('กรุณาบันทึกเอกสารก่อน')
+      return
+    }
+
+    try {
+      const { shareToken, error } = await generateShareToken(currentDocId)
+      if (error) throw error
+      
+      const shareUrl = `${window.location.origin}/view/${shareToken}`
+      setSavedLink(shareUrl)
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(shareUrl)
+      alert('คัดลอกลิงก์แล้ว!')
+    } catch (error) {
+      console.error('Share error:', error)
+      alert('เกิดข้อผิดพลาด')
+    }
+  }
+
+  // Export PDF
+  const handleExportPdf = async () => {
+    setExporting(true)
+    try {
+      const filename = `${docInfo.docNumber || 'document'}.pdf`
+      await exportPdfFromElement('invoice-preview', filename)
+    } catch (error) {
+      console.error('PDF export error:', error)
+      alert('เกิดข้อผิดพลาดในการสร้าง PDF')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  // โหลดเอกสารเก่า
+  const loadDocument = (doc) => {
+    setCurrentDocId(doc.id)
+    setDocType(doc.doc_type)
+    setDocInfo({
+      docNumber: doc.doc_number,
+      date: doc.doc_date,
+      dueDate: doc.due_date || '',
+      note: doc.note || ''
+    })
+    setClientInfo({
+      name: doc.client_name || '',
+      address: doc.client_address || '',
+      phone: doc.client_phone || '',
+      email: '',
+      taxId: doc.client_tax_id || ''
+    })
+    setItems(doc.items || [{ id: 1, description: '', quantity: 1, price: 0 }])
+    setTaxOptions({
+      includeVat: doc.include_vat || false,
+      withholding: doc.withholding_tax || 'none'
+    })
+    setShowHistory(false)
+    setActiveTab('create')
+  }
+
+  // สร้างเอกสารใหม่
+  const createNewDocument = () => {
+    setCurrentDocId(null)
+    setClientInfo({ name: '', address: '', phone: '', email: '', taxId: '' })
+    setItems([{ id: 1, description: '', quantity: 1, price: 0 }])
+    setTaxOptions({ includeVat: false, withholding: 'none' })
+    setDocInfo({
+      docNumber: '',
+      date: new Date().toISOString().split('T')[0],
+      dueDate: '',
+      note: ''
+    })
+    setSavedLink('')
+    generateNewDocNumber()
+  }
+
+  // บันทึก profile
+  const handleSaveSettings = async () => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true)
+      return
+    }
+
+    const { error } = await saveProfile({
+      name: companyInfo.name,
+      address: companyInfo.address,
+      phone: companyInfo.phone,
+      email: companyInfo.email,
+      tax_id: companyInfo.taxId,
+      theme_color: companyInfo.themeColor
+    })
+
+    if (error) {
+      alert('เกิดข้อผิดพลาด: ' + error.message)
+    } else {
+      alert('บันทึกการตั้งค่าสำเร็จ!')
+      setShowSettings(false)
+    }
+  }
+
+  // ลบเอกสาร
+  const handleDeleteDocument = async (docId) => {
+    if (!confirm('ต้องการลบเอกสารนี้?')) return
+    
+    const { error } = await deleteDocument(docId)
+    if (error) {
+      alert('เกิดข้อผิดพลาด')
+    } else {
+      setDocuments(docs => docs.filter(d => d.id !== docId))
+      if (currentDocId === docId) {
+        createNewDocument()
+      }
+    }
+  }
 
   const docTypeLabels = {
     quotation: 'ใบเสนอราคา',
     invoice: 'ใบแจ้งหนี้',
     receipt: 'ใบเสร็จรับเงิน'
-  };
+  }
+
+  if (loading) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-spinner"></div>
+        <p>กำลังโหลด...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="app-container">
       {/* Header */}
-      <header className="header">
+      <header className="header no-print">
         <div className="header-content">
           <div className="logo-section">
             <div className="logo-icon">
@@ -178,19 +365,35 @@ function App() {
             </div>
           </div>
           
-          <button onClick={() => setShowSettings(!showSettings)} className="settings-btn">
-            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </button>
+          <div className="header-actions">
+            {isAuthenticated ? (
+              <>
+                <button onClick={() => setShowHistory(true)} className="header-btn">
+                  📄 ประวัติ
+                </button>
+                <button onClick={() => setShowSettings(true)} className="header-btn">
+                  ⚙️ ตั้งค่า
+                </button>
+                <button onClick={signOut} className="header-btn logout">
+                  ออกจากระบบ
+                </button>
+              </>
+            ) : (
+              <button onClick={() => setShowAuthModal(true)} className="btn-primary small">
+                เข้าสู่ระบบ
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
+      {/* Auth Modal */}
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+
       {/* Settings Modal */}
       {showSettings && (
-        <div className="modal-overlay">
-          <div className="modal-content">
+        <div className="modal-overlay" onClick={() => setShowSettings(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2>ตั้งค่าข้อมูลของคุณ</h2>
               <button onClick={() => setShowSettings(false)} className="close-btn">✕</button>
@@ -261,16 +464,62 @@ function App() {
               </div>
             </div>
             
-            <button onClick={() => setShowSettings(false)} className="btn-primary full-width">
+            <button onClick={handleSaveSettings} className="btn-primary full-width">
               บันทึก
             </button>
           </div>
         </div>
       )}
 
+      {/* History Modal */}
+      {showHistory && (
+        <div className="modal-overlay" onClick={() => setShowHistory(false)}>
+          <div className="modal-content history-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>📄 ประวัติเอกสาร</h2>
+              <button onClick={() => setShowHistory(false)} className="close-btn">✕</button>
+            </div>
+            
+            <button onClick={() => { createNewDocument(); setShowHistory(false); }} className="btn-primary full-width mb-16">
+              + สร้างเอกสารใหม่
+            </button>
+
+            {documents.length === 0 ? (
+              <div className="empty-state">
+                <p>ยังไม่มีเอกสาร</p>
+              </div>
+            ) : (
+              <div className="document-list">
+                {documents.map(doc => (
+                  <div key={doc.id} className="document-item">
+                    <div className="doc-info" onClick={() => loadDocument(doc)}>
+                      <div className="doc-type-badge" style={{ backgroundColor: companyInfo.themeColor }}>
+                        {docTypeLabels[doc.doc_type]}
+                      </div>
+                      <div className="doc-details">
+                        <p className="doc-number">{doc.doc_number}</p>
+                        <p className="doc-client">{doc.client_name || 'ไม่ระบุลูกค้า'}</p>
+                        <p className="doc-amount">฿{formatNumber(doc.net_total)}</p>
+                        <p className="doc-date">{formatThaiDate(doc.doc_date)}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleDeleteDocument(doc.id); }}
+                      className="delete-btn"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <main className="main-content">
         {/* Document Type Selector */}
-        <div className="doc-type-selector">
+        <div className="doc-type-selector no-print">
           {['quotation', 'invoice', 'receipt'].map(type => (
             <button
               key={type}
@@ -283,7 +532,7 @@ function App() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="tab-nav">
+        <div className="tab-nav no-print">
           <button
             onClick={() => setActiveTab('create')}
             className={`tab-btn ${activeTab === 'create' ? 'active' : ''}`}
@@ -340,6 +589,34 @@ function App() {
                 <span className="card-icon blue">👤</span>
                 ข้อมูลลูกค้า
               </h3>
+              
+              {/* Client Select (if has saved clients) */}
+              {clients.length > 0 && (
+                <div className="form-group">
+                  <label>เลือกลูกค้าที่บันทึกไว้</label>
+                  <select 
+                    onChange={(e) => {
+                      const selected = clients.find(c => c.id === e.target.value)
+                      if (selected) {
+                        setClientInfo({
+                          name: selected.name,
+                          address: selected.address || '',
+                          phone: selected.phone || '',
+                          email: selected.email || '',
+                          taxId: selected.tax_id || ''
+                        })
+                      }
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="">-- เลือกลูกค้า --</option>
+                    {clients.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="form-group">
                 <label>ชื่อลูกค้า/บริษัท</label>
                 <input
@@ -510,27 +787,32 @@ function App() {
               />
             </div>
 
-            {/* Action Button */}
-            <button onClick={() => setActiveTab('preview')} className="btn-primary full-width">
-              👁️ ดูตัวอย่าง
-            </button>
+            {/* Action Buttons */}
+            <div className="action-buttons">
+              <button onClick={saveDocument} className="btn-secondary" disabled={saving}>
+                {saving ? '⏳ กำลังบันทึก...' : '💾 บันทึก'}
+              </button>
+              <button onClick={() => setActiveTab('preview')} className="btn-primary">
+                👁️ ดูตัวอย่าง
+              </button>
+            </div>
           </div>
         )}
 
         {activeTab === 'preview' && (
           <div className="preview-section">
             {/* Action Bar */}
-            <div className="action-bar">
-              <button onClick={() => window.print()} className="btn-secondary">
-                📥 บันทึก PDF
+            <div className="action-bar no-print">
+              <button onClick={handleExportPdf} className="btn-secondary" disabled={exporting}>
+                {exporting ? '⏳ กำลังสร้าง...' : '📥 ดาวน์โหลด PDF'}
               </button>
-              <button onClick={generateShareLink} className="btn-primary">
+              <button onClick={handleGenerateShareLink} className="btn-primary">
                 🔗 สร้างลิงก์แชร์
               </button>
             </div>
 
             {savedLink && (
-              <div className="share-link-box">
+              <div className="share-link-box no-print">
                 <p>✅ สร้างลิงก์สำเร็จ!</p>
                 <div className="share-link-input">
                   <input type="text" value={savedLink} readOnly />
@@ -542,7 +824,7 @@ function App() {
             )}
 
             {/* Invoice Preview */}
-            <div className="invoice-preview">
+            <div className="invoice-preview" id="invoice-preview">
               {/* Header */}
               <div className="invoice-header" style={{ borderColor: companyInfo.themeColor }}>
                 <div>
@@ -571,12 +853,12 @@ function App() {
                   <div className="meta-row">
                     <div>
                       <p className="meta-label">วันที่</p>
-                      <p className="meta-value">{new Date(docInfo.date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                      <p className="meta-value">{formatThaiDate(docInfo.date)}</p>
                     </div>
                     {docInfo.dueDate && (
                       <div>
                         <p className="meta-label">ครบกำหนด</p>
-                        <p className="meta-value">{new Date(docInfo.dueDate).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        <p className="meta-value">{formatThaiDate(docInfo.dueDate)}</p>
                       </div>
                     )}
                   </div>
@@ -658,7 +940,7 @@ function App() {
             </div>
 
             {/* Back Button */}
-            <button onClick={() => setActiveTab('create')} className="btn-secondary full-width">
+            <button onClick={() => setActiveTab('create')} className="btn-secondary full-width no-print">
               ← กลับไปแก้ไข
             </button>
           </div>
@@ -666,11 +948,22 @@ function App() {
       </main>
 
       {/* Footer */}
-      <footer className="footer">
+      <footer className="footer no-print">
         <p>billwai - ระบบออกใบเสนอราคา/ใบแจ้งหนี้สำหรับฟรีแลนซ์ไทย</p>
         <p>เร็ว ง่าย สวย จบใน 1 นาที 🚀</p>
       </footer>
     </div>
+  )
+}
+
+// ============================================
+// App with AuthProvider
+// ============================================
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
 
