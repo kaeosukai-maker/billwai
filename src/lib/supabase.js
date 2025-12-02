@@ -95,8 +95,8 @@ export const getClients = async (userId) => {
   return { data, error }
 }
 
-// สร้างลูกค้าใหม่
-export const createClient = async (clientData) => {
+// สร้างลูกค้าใหม่ (เปลี่ยนชื่อจาก createClient เป็น saveClient)
+export const saveClient = async (clientData) => {
   const { data, error } = await supabase
     .from('clients')
     .insert(clientData)

@@ -10,7 +10,7 @@ import {
   generateShareToken,
   generateDocNumber,
   getClients,
-  createClient as createClientDB
+  saveClient
 } from './lib/supabase'
 import { exportPdfFromElement, bahtText, formatNumber, formatThaiDate } from './utils/pdfExport'
 import './App.css'
