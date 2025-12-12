@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/auth/AuthProvider';
+import LoginModal from '@/components/auth/LoginModal';
 
 const navigation = [
     {
@@ -64,6 +65,7 @@ const navigation = [
 export default function Sidebar() {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
+    const [showLoginModal, setShowLoginModal] = useState(false);
     const { user, signOut } = useAuth();
 
     return (
@@ -76,15 +78,15 @@ export default function Sidebar() {
                 {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
 
-            {/* Login Button - Top Right (Mobile & Desktop when not logged in) */}
+            {/* Login Button - Top Right (when not logged in) */}
             {!user && (
-                <Link
-                    href="/auth/login"
+                <button
+                    onClick={() => setShowLoginModal(true)}
                     className="fixed top-4 right-4 z-[60] px-4 py-2.5 rounded-xl glass text-white hover:scale-105 transition-transform flex items-center gap-2"
                 >
                     <LogIn className="w-5 h-5" />
                     <span className="hidden sm:inline">เข้าสู่ระบบ</span>
-                </Link>
+                </button>
             )}
 
             {/* User Avatar - Top Right (when logged in, only on mobile) */}
@@ -220,17 +222,22 @@ export default function Sidebar() {
                             </button>
                         </div>
                     ) : (
-                        <Link
-                            href="/auth/login"
-                            onClick={() => setIsOpen(false)}
-                            className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-violet-500/20 to-purple-500/20 border border-violet-500/30 hover:border-violet-400 transition-colors"
+                        <button
+                            onClick={() => {
+                                setIsOpen(false);
+                                setShowLoginModal(true);
+                            }}
+                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-violet-500/20 to-purple-500/20 border border-violet-500/30 hover:border-violet-400 transition-colors"
                         >
                             <LogIn className="w-5 h-5 text-violet-400" />
                             <span className="text-sm font-medium">เข้าสู่ระบบ / สมัครสมาชิก</span>
-                        </Link>
+                        </button>
                     )}
                 </div>
             </div>
+
+            {/* Login Modal */}
+            <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
         </>
     );
 }

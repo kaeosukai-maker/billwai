@@ -36,7 +36,7 @@ body::before {
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
+  background:
     radial-gradient(ellipse 80% 50% at 20% 40%, rgba(99, 102, 241, 0.15), transparent),
     radial-gradient(ellipse 60% 40% at 80% 60%, rgba(139, 92, 246, 0.1), transparent),
     radial-gradient(ellipse 50% 30% at 50% 80%, rgba(59, 130, 246, 0.08), transparent);
@@ -46,8 +46,15 @@ body::before {
 }
 
 @keyframes ambientGlow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }
 
 /* Custom scrollbar */
@@ -78,7 +85,7 @@ body::before {
 
   .glass-card {
     @apply glass rounded-2xl p-6 relative overflow-hidden;
-    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
   }
 
   .glass-card::before {
@@ -88,7 +95,7 @@ body::before {
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
   }
 
   .glass-button {
@@ -96,48 +103,46 @@ body::before {
   }
 
   .glass-button:hover {
-    background: rgba(255,255,255,0.1);
-    border-color: rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
     transform: translateY(-1px);
   }
 
   .btn-primary {
-    @apply relative overflow-hidden font-semibold px-6 py-3 rounded-xl 
-           transition-all duration-300 active:scale-95;
+    @apply relative overflow-hidden font-semibold px-6 py-3 rounded-xl transition-all duration-300 active:scale-95;
     background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #6366f1 100%);
     background-size: 200% 200%;
     animation: gradientShift 3s ease infinite;
-    box-shadow: 
+    box-shadow:
       0 0 20px rgba(99, 102, 241, 0.4),
       0 0 40px rgba(139, 92, 246, 0.2),
-      inset 0 1px 0 rgba(255,255,255,0.2);
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
 
   .btn-primary:hover {
-    box-shadow: 
+    box-shadow:
       0 0 30px rgba(99, 102, 241, 0.6),
       0 0 60px rgba(139, 92, 246, 0.3),
-      inset 0 1px 0 rgba(255,255,255,0.3);
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
     transform: translateY(-2px);
   }
 
   .btn-secondary {
     @apply font-semibold px-6 py-3 rounded-xl border transition-all duration-300 active:scale-95;
-    background: rgba(255,255,255,0.05);
-    border-color: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
   }
 
   .btn-secondary:hover {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
     border-color: rgba(99, 102, 241, 0.5);
     box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
     transform: translateY(-2px);
   }
 
   .btn-danger {
-    @apply relative overflow-hidden font-semibold px-6 py-3 rounded-xl 
-           transition-all duration-300 active:scale-95;
+    @apply relative overflow-hidden font-semibold px-6 py-3 rounded-xl transition-all duration-300 active:scale-95;
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
   }
@@ -148,8 +153,7 @@ body::before {
   }
 
   .btn-success {
-    @apply relative overflow-hidden font-semibold px-6 py-3 rounded-xl 
-           transition-all duration-300 active:scale-95;
+    @apply relative overflow-hidden font-semibold px-6 py-3 rounded-xl transition-all duration-300 active:scale-95;
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
   }
@@ -160,17 +164,38 @@ body::before {
   }
 
   .input-field {
-    @apply w-full rounded-xl px-4 py-3 text-surface-100 
-           placeholder:text-surface-500 
-           focus:outline-none transition-all duration-300;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.1);
+    @apply w-full rounded-xl px-4 py-3 text-surface-100 placeholder:text-surface-500 focus:outline-none transition-all duration-300;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .input-field:focus {
-    background: rgba(255,255,255,0.05);
+    background: rgba(255, 255, 255, 0.05);
     border-color: rgba(99, 102, 241, 0.5);
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), 0 0 20px rgba(99, 102, 241, 0.1);
+  }
+
+  /* Select/Dropdown styling */
+  select.input-field {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%239ca3af' viewBox='0 0 16 16'%3E%3Cpath d='M4.646 6.646a.5.5 0 0 1 .708 0L8 9.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 2.5rem;
+    cursor: pointer;
+  }
+
+  select.input-field option {
+    background: #1a1035;
+    color: #f8fafc;
+    padding: 0.5rem;
+  }
+
+  select.input-field option:hover,
+  select.input-field option:focus,
+  select.input-field option:checked {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
   }
 
   .label {
@@ -183,7 +208,7 @@ body::before {
 
   .table-header {
     @apply text-surface-300 text-sm font-medium;
-    background: rgba(0,0,0,0.2);
+    background: rgba(0, 0, 0, 0.2);
   }
 
   .table-row {
@@ -209,13 +234,12 @@ body::before {
   }
 
   .nav-link {
-    @apply flex items-center gap-3 px-4 py-3 rounded-xl 
-           text-surface-400 transition-all duration-300;
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl text-surface-400 transition-all duration-300;
   }
 
   .nav-link:hover {
     color: white;
-    background: rgba(255,255,255,0.05);
+    background: rgba(255, 255, 255, 0.05);
   }
 
   .nav-link.active {
@@ -259,7 +283,7 @@ body::before {
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
     animation: shimmer 2s infinite;
   }
 
@@ -279,23 +303,47 @@ body::before {
 }
 
 @keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 @keyframes shimmer {
-  100% { left: 100%; }
+  100% {
+    left: 100%;
+  }
 }
 
 @keyframes pulseRing {
-  0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1.2); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
 }
 
 /* Fade in animation */
@@ -304,8 +352,15 @@ body::before {
 }
 
 @keyframes fadeIn {
-  0% { opacity: 0; transform: translateY(10px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Stagger animation for lists */
@@ -314,15 +369,36 @@ body::before {
   animation: slideUp 0.5s ease-out forwards;
 }
 
-.stagger-item:nth-child(1) { animation-delay: 0.1s; }
-.stagger-item:nth-child(2) { animation-delay: 0.2s; }
-.stagger-item:nth-child(3) { animation-delay: 0.3s; }
-.stagger-item:nth-child(4) { animation-delay: 0.4s; }
-.stagger-item:nth-child(5) { animation-delay: 0.5s; }
+.stagger-item:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.stagger-item:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.stagger-item:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.stagger-item:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+.stagger-item:nth-child(5) {
+  animation-delay: 0.5s;
+}
 
 @keyframes slideUp {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Print styles */
@@ -331,7 +407,7 @@ body::before {
     background: white !important;
     color: black !important;
   }
-  
+
   .no-print {
     display: none !important;
   }
