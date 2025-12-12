@@ -6,9 +6,12 @@ import { getOptionalUserId } from '@/lib/auth';
 export async function GET() {
     try {
         const userId = await getOptionalUserId();
-        const where = userId ? { userId } : { userId: null };
 
-        const business = await prisma.business.findFirst({ where });
+        // ถ้า login แล้วดึงของ user, ถ้าไม่ login ดึงอันแรก (สำหรับ demo)
+        const business = userId
+            ? await prisma.business.findFirst({ where: { userId } })
+            : await prisma.business.findFirst({ orderBy: { createdAt: 'desc' } });
+
         return NextResponse.json(business || null);
     } catch (error) {
         console.error('Error fetching business:', error);
@@ -33,8 +36,10 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const where = userId ? { userId } : { userId: null };
-        const existingBusiness = await prisma.business.findFirst({ where });
+        // หา business ที่มีอยู่
+        const existingBusiness = userId
+            ? await prisma.business.findFirst({ where: { userId } })
+            : await prisma.business.findFirst({ orderBy: { createdAt: 'desc' } });
 
         let business;
         if (existingBusiness) {
@@ -55,7 +60,7 @@ export async function POST(request: NextRequest) {
         } else {
             business = await prisma.business.create({
                 data: {
-                    userId: userId || undefined,
+                    userId: userId || 'anonymous',
                     name,
                     taxId: taxId || null,
                     address: address || null,

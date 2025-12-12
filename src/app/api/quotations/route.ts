@@ -11,26 +11,21 @@ export async function GET(request: NextRequest) {
         const status = searchParams.get('status');
         const customerId = searchParams.get('customerId');
 
-        const where: Record<string, unknown> = userId ? { userId } : { userId: null };
+        const where: Record<string, unknown> = {};
+        if (userId) where.userId = userId;
         if (status) where.status = status;
         if (customerId) where.customerId = customerId;
 
         const quotations = await prisma.quotation.findMany({
-            where,
+            where: Object.keys(where).length > 0 ? where : undefined,
             orderBy: { createdAt: 'desc' },
-            include: {
-                customer: true,
-                items: true,
-            },
+            include: { customer: true, items: true },
         });
 
         return NextResponse.json(quotations);
     } catch (error) {
         console.error('Error fetching quotations:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch quotations' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to fetch quotations' }, { status: 500 });
     }
 }
 
@@ -41,35 +36,22 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { customerId, issueDate, validUntil, items, vatRate, notes } = body;
 
-        // Validate required fields
         if (!customerId || !items || items.length === 0) {
-            return NextResponse.json(
-                { error: 'Customer and items are required' },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: 'Customer and items are required' }, { status: 400 });
         }
 
-        // คำนวณยอดรวม
         const subtotal = items.reduce((sum: number, item: { amount: number }) => sum + item.amount, 0);
         const vatAmount = subtotal * ((vatRate || 7) / 100);
         const total = subtotal + vatAmount;
 
-        // สร้างเลขที่เอกสาร
-        const countWhere = userId ? { userId } : { userId: null };
         const count = await prisma.quotation.count({
-            where: {
-                ...countWhere,
-                createdAt: {
-                    gte: new Date(new Date().getFullYear(), 0, 1),
-                },
-            },
+            where: { createdAt: { gte: new Date(new Date().getFullYear(), 0, 1) } },
         });
         const number = generateDocumentNumber('QT', count + 1);
 
-        // สร้างใบเสนอราคา
         const quotation = await prisma.quotation.create({
             data: {
-                userId: userId || undefined,
+                userId: userId || 'anonymous',
                 number,
                 customerId,
                 issueDate: new Date(issueDate),
@@ -90,18 +72,12 @@ export async function POST(request: NextRequest) {
                     })),
                 },
             },
-            include: {
-                customer: true,
-                items: true,
-            },
+            include: { customer: true, items: true },
         });
 
         return NextResponse.json(quotation, { status: 201 });
     } catch (error) {
         console.error('Error creating quotation:', error);
-        return NextResponse.json(
-            { error: 'Failed to create quotation' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to create quotation' }, { status: 500 });
     }
 }

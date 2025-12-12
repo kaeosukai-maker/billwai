@@ -7,21 +7,25 @@ export async function GET() {
     try {
         const userId = await getOptionalUserId();
 
-        // ถ้า login แล้วดึงเฉพาะของ user, ถ้าไม่ login ดึงที่ไม่มี userId
-        const where = userId ? { userId } : { userId: null };
-
-        const customers = await prisma.customer.findMany({
-            where,
-            orderBy: { createdAt: 'desc' },
-            include: {
-                _count: {
-                    select: {
-                        quotations: true,
-                        invoices: true,
+        const customers = userId
+            ? await prisma.customer.findMany({
+                where: { userId },
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    _count: {
+                        select: { quotations: true, invoices: true },
                     },
                 },
-            },
-        });
+            })
+            : await prisma.customer.findMany({
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    _count: {
+                        select: { quotations: true, invoices: true },
+                    },
+                },
+            });
+
         return NextResponse.json(customers);
     } catch (error) {
         console.error('Error fetching customers:', error);
@@ -48,7 +52,7 @@ export async function POST(request: NextRequest) {
 
         const customer = await prisma.customer.create({
             data: {
-                userId: userId || undefined,
+                userId: userId || 'anonymous',
                 name,
                 taxId: taxId || null,
                 address: address || null,

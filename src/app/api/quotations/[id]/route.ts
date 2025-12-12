@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getOptionalUserId } from '@/lib/auth';
 
 // GET - ดึงข้อมูลใบเสนอราคาตาม ID
 export async function GET(
@@ -8,33 +7,19 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        const userId = await getOptionalUserId();
-        const where = userId
-            ? { id: params.id, userId }
-            : { id: params.id, userId: null };
-
-        const quotation = await prisma.quotation.findFirst({
-            where,
-            include: {
-                customer: true,
-                items: true,
-            },
+        const quotation = await prisma.quotation.findUnique({
+            where: { id: params.id },
+            include: { customer: true, items: true },
         });
 
         if (!quotation) {
-            return NextResponse.json(
-                { error: 'Quotation not found' },
-                { status: 404 }
-            );
+            return NextResponse.json({ error: 'Quotation not found' }, { status: 404 });
         }
 
         return NextResponse.json(quotation);
     } catch (error) {
         console.error('Error fetching quotation:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch quotation' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to fetch quotation' }, { status: 500 });
     }
 }
 
@@ -44,26 +29,10 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const userId = await getOptionalUserId();
-        const where = userId
-            ? { id: params.id, userId }
-            : { id: params.id, userId: null };
-
-        const existing = await prisma.quotation.findFirst({ where });
-        if (!existing) {
-            return NextResponse.json(
-                { error: 'Quotation not found' },
-                { status: 404 }
-            );
-        }
-
         const body = await request.json();
         const { customerId, issueDate, validUntil, items, vatRate, notes, status } = body;
 
-        // คำนวณยอดรวมใหม่
-        let subtotal = 0;
-        let vatAmount = 0;
-        let total = 0;
+        let subtotal = 0, vatAmount = 0, total = 0;
 
         if (items && items.length > 0) {
             subtotal = items.reduce((sum: number, item: { amount: number }) => sum + item.amount, 0);
@@ -71,14 +40,10 @@ export async function PUT(
             total = subtotal + vatAmount;
         }
 
-        // ลบรายการเก่าก่อน (ถ้ามีการอัปเดต items)
         if (items) {
-            await prisma.quotationItem.deleteMany({
-                where: { quotationId: params.id },
-            });
+            await prisma.quotationItem.deleteMany({ where: { quotationId: params.id } });
         }
 
-        // อัปเดตใบเสนอราคา
         const quotation = await prisma.quotation.update({
             where: { id: params.id },
             data: {
@@ -101,19 +66,13 @@ export async function PUT(
                     },
                 }),
             },
-            include: {
-                customer: true,
-                items: true,
-            },
+            include: { customer: true, items: true },
         });
 
         return NextResponse.json(quotation);
     } catch (error) {
         console.error('Error updating quotation:', error);
-        return NextResponse.json(
-            { error: 'Failed to update quotation' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to update quotation' }, { status: 500 });
     }
 }
 
@@ -123,29 +82,10 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const userId = await getOptionalUserId();
-        const where = userId
-            ? { id: params.id, userId }
-            : { id: params.id, userId: null };
-
-        const existing = await prisma.quotation.findFirst({ where });
-        if (!existing) {
-            return NextResponse.json(
-                { error: 'Quotation not found' },
-                { status: 404 }
-            );
-        }
-
-        await prisma.quotation.delete({
-            where: { id: params.id },
-        });
-
+        await prisma.quotation.delete({ where: { id: params.id } });
         return NextResponse.json({ message: 'Quotation deleted' });
     } catch (error) {
         console.error('Error deleting quotation:', error);
-        return NextResponse.json(
-            { error: 'Failed to delete quotation' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to delete quotation' }, { status: 500 });
     }
 }

@@ -11,26 +11,21 @@ export async function GET(request: NextRequest) {
         const status = searchParams.get('status');
         const customerId = searchParams.get('customerId');
 
-        const where: Record<string, unknown> = userId ? { userId } : { userId: null };
+        const where: Record<string, unknown> = {};
+        if (userId) where.userId = userId;
         if (status) where.status = status;
         if (customerId) where.customerId = customerId;
 
         const invoices = await prisma.invoice.findMany({
-            where,
+            where: Object.keys(where).length > 0 ? where : undefined,
             orderBy: { createdAt: 'desc' },
-            include: {
-                customer: true,
-                items: true,
-            },
+            include: { customer: true, items: true },
         });
 
         return NextResponse.json(invoices);
     } catch (error) {
         console.error('Error fetching invoices:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch invoices' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to fetch invoices' }, { status: 500 });
     }
 }
 
@@ -41,36 +36,23 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { customerId, quotationId, issueDate, dueDate, items, vatRate, withholdingTaxRate, notes } = body;
 
-        // Validate required fields
         if (!customerId || !items || items.length === 0) {
-            return NextResponse.json(
-                { error: 'Customer and items are required' },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: 'Customer and items are required' }, { status: 400 });
         }
 
-        // คำนวณยอดรวม
         const subtotal = items.reduce((sum: number, item: { amount: number }) => sum + item.amount, 0);
         const vatAmount = subtotal * ((vatRate || 7) / 100);
         const withholdingTax = subtotal * ((withholdingTaxRate || 0) / 100);
         const total = subtotal + vatAmount - withholdingTax;
 
-        // สร้างเลขที่เอกสาร
-        const countWhere = userId ? { userId } : { userId: null };
         const count = await prisma.invoice.count({
-            where: {
-                ...countWhere,
-                createdAt: {
-                    gte: new Date(new Date().getFullYear(), 0, 1),
-                },
-            },
+            where: { createdAt: { gte: new Date(new Date().getFullYear(), 0, 1) } },
         });
         const number = generateDocumentNumber('INV', count + 1);
 
-        // สร้างใบแจ้งหนี้
         const invoice = await prisma.invoice.create({
             data: {
-                userId: userId || undefined,
+                userId: userId || 'anonymous',
                 number,
                 customerId,
                 quotationId: quotationId || null,
@@ -93,18 +75,12 @@ export async function POST(request: NextRequest) {
                     })),
                 },
             },
-            include: {
-                customer: true,
-                items: true,
-            },
+            include: { customer: true, items: true },
         });
 
         return NextResponse.json(invoice, { status: 201 });
     } catch (error) {
         console.error('Error creating invoice:', error);
-        return NextResponse.json(
-            { error: 'Failed to create invoice' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to create invoice' }, { status: 500 });
     }
 }

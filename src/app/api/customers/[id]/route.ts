@@ -8,39 +8,22 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        const userId = await getOptionalUserId();
-        const where = userId
-            ? { id: params.id, userId }
-            : { id: params.id, userId: null };
-
-        const customer = await prisma.customer.findFirst({
-            where,
+        const customer = await prisma.customer.findUnique({
+            where: { id: params.id },
             include: {
-                quotations: {
-                    orderBy: { createdAt: 'desc' },
-                    take: 5,
-                },
-                invoices: {
-                    orderBy: { createdAt: 'desc' },
-                    take: 5,
-                },
+                quotations: { orderBy: { createdAt: 'desc' }, take: 5 },
+                invoices: { orderBy: { createdAt: 'desc' }, take: 5 },
             },
         });
 
         if (!customer) {
-            return NextResponse.json(
-                { error: 'Customer not found' },
-                { status: 404 }
-            );
+            return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
         }
 
         return NextResponse.json(customer);
     } catch (error) {
         console.error('Error fetching customer:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch customer' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to fetch customer' }, { status: 500 });
     }
 }
 
@@ -50,19 +33,6 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const userId = await getOptionalUserId();
-        const where = userId
-            ? { id: params.id, userId }
-            : { id: params.id, userId: null };
-
-        const existing = await prisma.customer.findFirst({ where });
-        if (!existing) {
-            return NextResponse.json(
-                { error: 'Customer not found' },
-                { status: 404 }
-            );
-        }
-
         const body = await request.json();
         const { name, taxId, address, phone, email } = body;
 
@@ -80,10 +50,7 @@ export async function PUT(
         return NextResponse.json(customer);
     } catch (error) {
         console.error('Error updating customer:', error);
-        return NextResponse.json(
-            { error: 'Failed to update customer' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to update customer' }, { status: 500 });
     }
 }
 
@@ -93,29 +60,10 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const userId = await getOptionalUserId();
-        const where = userId
-            ? { id: params.id, userId }
-            : { id: params.id, userId: null };
-
-        const existing = await prisma.customer.findFirst({ where });
-        if (!existing) {
-            return NextResponse.json(
-                { error: 'Customer not found' },
-                { status: 404 }
-            );
-        }
-
-        await prisma.customer.delete({
-            where: { id: params.id },
-        });
-
+        await prisma.customer.delete({ where: { id: params.id } });
         return NextResponse.json({ message: 'Customer deleted' });
     } catch (error) {
         console.error('Error deleting customer:', error);
-        return NextResponse.json(
-            { error: 'Failed to delete customer' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to delete customer' }, { status: 500 });
     }
 }
