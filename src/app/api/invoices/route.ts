@@ -1,19 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { generateDocumentNumber } from '@/lib/utils';
-import { getAuthUserId, unauthorizedResponse } from '@/lib/auth';
+import { getOptionalUserId } from '@/lib/auth';
 
-// GET - ดึงรายการใบแจ้งหนี้ทั้งหมด (ของ user ปัจจุบัน)
+// GET - ดึงรายการใบแจ้งหนี้ทั้งหมด
 export async function GET(request: NextRequest) {
     try {
-        const userId = await getAuthUserId();
-        if (!userId) return unauthorizedResponse();
-
+        const userId = await getOptionalUserId();
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');
         const customerId = searchParams.get('customerId');
 
-        const where: Record<string, unknown> = { userId };
+        const where: Record<string, unknown> = userId ? { userId } : { userId: null };
         if (status) where.status = status;
         if (customerId) where.customerId = customerId;
 
@@ -39,9 +37,7 @@ export async function GET(request: NextRequest) {
 // POST - สร้างใบแจ้งหนี้ใหม่
 export async function POST(request: NextRequest) {
     try {
-        const userId = await getAuthUserId();
-        if (!userId) return unauthorizedResponse();
-
+        const userId = await getOptionalUserId();
         const body = await request.json();
         const { customerId, quotationId, issueDate, dueDate, items, vatRate, withholdingTaxRate, notes } = body;
 
@@ -60,9 +56,10 @@ export async function POST(request: NextRequest) {
         const total = subtotal + vatAmount - withholdingTax;
 
         // สร้างเลขที่เอกสาร
+        const countWhere = userId ? { userId } : { userId: null };
         const count = await prisma.invoice.count({
             where: {
-                userId,
+                ...countWhere,
                 createdAt: {
                     gte: new Date(new Date().getFullYear(), 0, 1),
                 },
@@ -73,7 +70,7 @@ export async function POST(request: NextRequest) {
         // สร้างใบแจ้งหนี้
         const invoice = await prisma.invoice.create({
             data: {
-                userId,
+                userId: userId || undefined,
                 number,
                 customerId,
                 quotationId: quotationId || null,

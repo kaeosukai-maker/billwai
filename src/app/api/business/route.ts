@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getAuthUserId, unauthorizedResponse } from '@/lib/auth';
+import { getOptionalUserId } from '@/lib/auth';
 
-// GET - ดึงข้อมูลธุรกิจ (ของ user ปัจจุบัน)
+// GET - ดึงข้อมูลธุรกิจ
 export async function GET() {
     try {
-        const userId = await getAuthUserId();
-        if (!userId) return unauthorizedResponse();
+        const userId = await getOptionalUserId();
+        const where = userId ? { userId } : { userId: null };
 
-        const business = await prisma.business.findFirst({
-            where: { userId }
-        });
+        const business = await prisma.business.findFirst({ where });
         return NextResponse.json(business || null);
     } catch (error) {
         console.error('Error fetching business:', error);
@@ -24,9 +22,7 @@ export async function GET() {
 // POST/PUT - สร้างหรืออัปเดตข้อมูลธุรกิจ
 export async function POST(request: NextRequest) {
     try {
-        const userId = await getAuthUserId();
-        if (!userId) return unauthorizedResponse();
-
+        const userId = await getOptionalUserId();
         const body = await request.json();
         const { name, taxId, address, phone, email, logo, bankName, bankAccount, bankAccountName } = body;
 
@@ -37,14 +33,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // ตรวจสอบว่ามีข้อมูลธุรกิจอยู่แล้วหรือไม่
-        const existingBusiness = await prisma.business.findFirst({
-            where: { userId }
-        });
+        const where = userId ? { userId } : { userId: null };
+        const existingBusiness = await prisma.business.findFirst({ where });
 
         let business;
         if (existingBusiness) {
-            // อัปเดตข้อมูลที่มีอยู่
             business = await prisma.business.update({
                 where: { id: existingBusiness.id },
                 data: {
@@ -60,10 +53,9 @@ export async function POST(request: NextRequest) {
                 },
             });
         } else {
-            // สร้างข้อมูลใหม่
             business = await prisma.business.create({
                 data: {
-                    userId,
+                    userId: userId || undefined,
                     name,
                     taxId: taxId || null,
                     address: address || null,

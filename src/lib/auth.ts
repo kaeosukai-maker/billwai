@@ -1,20 +1,21 @@
 import { createClient } from '@/lib/supabase/server';
-import { NextResponse } from 'next/server';
 
-export async function getAuthUserId() {
-    const supabase = createClient();
-    const { data: { user }, error } = await supabase.auth.getUser();
+export async function getAuthUserId(): Promise<string | null> {
+    try {
+        const supabase = createClient();
+        const { data: { user }, error } = await supabase.auth.getUser();
 
-    if (error || !user) {
+        if (error || !user) {
+            return null;
+        }
+
+        return user.id;
+    } catch {
         return null;
     }
-
-    return user.id;
 }
 
-export function unauthorizedResponse() {
-    return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-    );
+// สำหรับ API ที่ไม่บังคับ login
+export function getOptionalUserId(): Promise<string | null> {
+    return getAuthUserId();
 }

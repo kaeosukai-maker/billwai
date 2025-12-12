@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getAuthUserId, unauthorizedResponse } from '@/lib/auth';
+import { getOptionalUserId } from '@/lib/auth';
 
-// GET - ดึงข้อมูลใบแจ้งหนี้ตาม ID (ของ user ปัจจุบัน)
+// GET - ดึงข้อมูลใบแจ้งหนี้ตาม ID
 export async function GET(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
-        const userId = await getAuthUserId();
-        if (!userId) return unauthorizedResponse();
+        const userId = await getOptionalUserId();
+        const where = userId
+            ? { id: params.id, userId }
+            : { id: params.id, userId: null };
 
         const invoice = await prisma.invoice.findFirst({
-            where: { id: params.id, userId },
+            where,
             include: {
                 customer: true,
                 items: true,
@@ -42,13 +44,12 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const userId = await getAuthUserId();
-        if (!userId) return unauthorizedResponse();
+        const userId = await getOptionalUserId();
+        const where = userId
+            ? { id: params.id, userId }
+            : { id: params.id, userId: null };
 
-        // ตรวจสอบว่าเป็นใบแจ้งหนี้ของ user ปัจจุบัน
-        const existing = await prisma.invoice.findFirst({
-            where: { id: params.id, userId }
-        });
+        const existing = await prisma.invoice.findFirst({ where });
         if (!existing) {
             return NextResponse.json(
                 { error: 'Invoice not found' },
@@ -124,13 +125,12 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const userId = await getAuthUserId();
-        if (!userId) return unauthorizedResponse();
+        const userId = await getOptionalUserId();
+        const where = userId
+            ? { id: params.id, userId }
+            : { id: params.id, userId: null };
 
-        // ตรวจสอบว่าเป็นใบแจ้งหนี้ของ user ปัจจุบัน
-        const existing = await prisma.invoice.findFirst({
-            where: { id: params.id, userId }
-        });
+        const existing = await prisma.invoice.findFirst({ where });
         if (!existing) {
             return NextResponse.json(
                 { error: 'Invoice not found' },

@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getAuthUserId, unauthorizedResponse } from '@/lib/auth';
+import { getOptionalUserId } from '@/lib/auth';
 
-// GET - ดึงรายการลูกค้าทั้งหมด (ของ user ปัจจุบัน)
+// GET - ดึงรายการลูกค้าทั้งหมด
 export async function GET() {
     try {
-        const userId = await getAuthUserId();
-        if (!userId) return unauthorizedResponse();
+        const userId = await getOptionalUserId();
+
+        // ถ้า login แล้วดึงเฉพาะของ user, ถ้าไม่ login ดึงที่ไม่มี userId
+        const where = userId ? { userId } : { userId: null };
 
         const customers = await prisma.customer.findMany({
-            where: { userId },
+            where,
             orderBy: { createdAt: 'desc' },
             include: {
                 _count: {
@@ -33,9 +35,7 @@ export async function GET() {
 // POST - สร้างลูกค้าใหม่
 export async function POST(request: NextRequest) {
     try {
-        const userId = await getAuthUserId();
-        if (!userId) return unauthorizedResponse();
-
+        const userId = await getOptionalUserId();
         const body = await request.json();
         const { name, taxId, address, phone, email } = body;
 
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
         const customer = await prisma.customer.create({
             data: {
-                userId,
+                userId: userId || undefined,
                 name,
                 taxId: taxId || null,
                 address: address || null,

@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getAuthUserId, unauthorizedResponse } from '@/lib/auth';
+import { getOptionalUserId } from '@/lib/auth';
 
-// GET - ดึงข้อมูลใบเสนอราคาตาม ID (ของ user ปัจจุบัน)
+// GET - ดึงข้อมูลใบเสนอราคาตาม ID
 export async function GET(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
-        const userId = await getAuthUserId();
-        if (!userId) return unauthorizedResponse();
+        const userId = await getOptionalUserId();
+        const where = userId
+            ? { id: params.id, userId }
+            : { id: params.id, userId: null };
 
         const quotation = await prisma.quotation.findFirst({
-            where: { id: params.id, userId },
+            where,
             include: {
                 customer: true,
                 items: true,
@@ -42,13 +44,12 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
-        const userId = await getAuthUserId();
-        if (!userId) return unauthorizedResponse();
+        const userId = await getOptionalUserId();
+        const where = userId
+            ? { id: params.id, userId }
+            : { id: params.id, userId: null };
 
-        // ตรวจสอบว่าเป็นใบเสนอราคาของ user ปัจจุบัน
-        const existing = await prisma.quotation.findFirst({
-            where: { id: params.id, userId }
-        });
+        const existing = await prisma.quotation.findFirst({ where });
         if (!existing) {
             return NextResponse.json(
                 { error: 'Quotation not found' },
@@ -122,13 +123,12 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const userId = await getAuthUserId();
-        if (!userId) return unauthorizedResponse();
+        const userId = await getOptionalUserId();
+        const where = userId
+            ? { id: params.id, userId }
+            : { id: params.id, userId: null };
 
-        // ตรวจสอบว่าเป็นใบเสนอราคาของ user ปัจจุบัน
-        const existing = await prisma.quotation.findFirst({
-            where: { id: params.id, userId }
-        });
+        const existing = await prisma.quotation.findFirst({ where });
         if (!existing) {
             return NextResponse.json(
                 { error: 'Quotation not found' },
