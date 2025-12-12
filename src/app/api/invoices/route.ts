@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { generateDocumentNumber } from '@/lib/utils';
+import { getAuthUserId, unauthorizedResponse } from '@/lib/auth';
 
-// GET - ดึงรายการใบแจ้งหนี้ทั้งหมด
+// GET - ดึงรายการใบแจ้งหนี้ทั้งหมด (ของ user ปัจจุบัน)
 export async function GET(request: NextRequest) {
     try {
+        const userId = await getAuthUserId();
+        if (!userId) return unauthorizedResponse();
+
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');
         const customerId = searchParams.get('customerId');
 
-        const where: Record<string, unknown> = {};
+        const where: Record<string, unknown> = { userId };
         if (status) where.status = status;
         if (customerId) where.customerId = customerId;
 
@@ -35,6 +39,9 @@ export async function GET(request: NextRequest) {
 // POST - สร้างใบแจ้งหนี้ใหม่
 export async function POST(request: NextRequest) {
     try {
+        const userId = await getAuthUserId();
+        if (!userId) return unauthorizedResponse();
+
         const body = await request.json();
         const { customerId, quotationId, issueDate, dueDate, items, vatRate, withholdingTaxRate, notes } = body;
 
@@ -55,6 +62,7 @@ export async function POST(request: NextRequest) {
         // สร้างเลขที่เอกสาร
         const count = await prisma.invoice.count({
             where: {
+                userId,
                 createdAt: {
                     gte: new Date(new Date().getFullYear(), 0, 1),
                 },
@@ -65,6 +73,7 @@ export async function POST(request: NextRequest) {
         // สร้างใบแจ้งหนี้
         const invoice = await prisma.invoice.create({
             data: {
+                userId,
                 number,
                 customerId,
                 quotationId: quotationId || null,

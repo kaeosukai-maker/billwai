@@ -1,5 +1,5 @@
 // Prisma Schema สำหรับ Thai Freelancer Billing App
-// Database: SQLite
+// Database: PostgreSQL
 
 generator client {
   provider = "prisma-client-js"
@@ -13,6 +13,7 @@ datasource db {
 // ข้อมูลธุรกิจ/ฟรีแลนซ์
 model Business {
   id          String   @id @default(uuid())
+  userId      String   // Supabase user ID
   name        String   // ชื่อธุรกิจ/ชื่อฟรีแลนซ์
   taxId       String?  // เลขประจำตัวผู้เสียภาษี
   address     String?
@@ -24,11 +25,14 @@ model Business {
   bankAccountName String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([userId])
 }
 
 // ลูกค้า
 model Customer {
   id         String      @id @default(uuid())
+  userId     String      // Supabase user ID
   name       String
   taxId      String?
   address    String?
@@ -38,11 +42,14 @@ model Customer {
   invoices   Invoice[]
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
+
+  @@index([userId])
 }
 
 // ใบเสนอราคา
 model Quotation {
   id         String          @id @default(uuid())
+  userId     String          // Supabase user ID
   number     String          @unique // QT-2024-0001
   customerId String
   customer   Customer        @relation(fields: [customerId], references: [id])
@@ -57,6 +64,8 @@ model Quotation {
   status     String          @default("draft") // draft, sent, accepted, rejected
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
+
+  @@index([userId])
 }
 
 // รายการในใบเสนอราคา
@@ -74,6 +83,7 @@ model QuotationItem {
 // ใบแจ้งหนี้/บิล
 model Invoice {
   id             String        @id @default(uuid())
+  userId         String        // Supabase user ID
   number         String        @unique // INV-2024-0001
   customerId     String
   customer       Customer      @relation(fields: [customerId], references: [id])
@@ -91,6 +101,8 @@ model Invoice {
   paidDate       DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+
+  @@index([userId])
 }
 
 // รายการในใบแจ้งหนี้

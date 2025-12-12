@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getAuthUserId, unauthorizedResponse } from '@/lib/auth';
 
-// GET - ดึงข้อมูลใบแจ้งหนี้ตาม ID
+// GET - ดึงข้อมูลใบแจ้งหนี้ตาม ID (ของ user ปัจจุบัน)
 export async function GET(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
-        const invoice = await prisma.invoice.findUnique({
-            where: { id: params.id },
+        const userId = await getAuthUserId();
+        if (!userId) return unauthorizedResponse();
+
+        const invoice = await prisma.invoice.findFirst({
+            where: { id: params.id, userId },
             include: {
                 customer: true,
                 items: true,
@@ -38,6 +42,20 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
+        const userId = await getAuthUserId();
+        if (!userId) return unauthorizedResponse();
+
+        // ตรวจสอบว่าเป็นใบแจ้งหนี้ของ user ปัจจุบัน
+        const existing = await prisma.invoice.findFirst({
+            where: { id: params.id, userId }
+        });
+        if (!existing) {
+            return NextResponse.json(
+                { error: 'Invoice not found' },
+                { status: 404 }
+            );
+        }
+
         const body = await request.json();
         const { customerId, issueDate, dueDate, items, vatRate, withholdingTax, notes, status, paidDate } = body;
 
@@ -106,6 +124,20 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
+        const userId = await getAuthUserId();
+        if (!userId) return unauthorizedResponse();
+
+        // ตรวจสอบว่าเป็นใบแจ้งหนี้ของ user ปัจจุบัน
+        const existing = await prisma.invoice.findFirst({
+            where: { id: params.id, userId }
+        });
+        if (!existing) {
+            return NextResponse.json(
+                { error: 'Invoice not found' },
+                { status: 404 }
+            );
+        }
+
         await prisma.invoice.delete({
             where: { id: params.id },
         });

@@ -13,8 +13,11 @@ import {
     Menu,
     X,
     Sparkles,
+    User,
+    LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 const navigation = [
     {
@@ -60,6 +63,7 @@ const navigation = [
 export default function Sidebar() {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
+    const { user, signOut } = useAuth();
 
     return (
         <>
@@ -167,11 +171,33 @@ export default function Sidebar() {
                     })}
                 </nav>
 
-                {/* Footer */}
+                {/* User Section */}
                 <div className="p-4 border-t border-white/10">
-                    <div className="glass-button text-center py-3">
-                        <p className="text-xs text-surface-500">สร้างด้วย ❤️ สำหรับฟรีแลนซ์ไทย</p>
-                    </div>
+                    {user && (
+                        <div className="space-y-2">
+                            <Link
+                                href="/profile"
+                                onClick={() => setIsOpen(false)}
+                                className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors"
+                            >
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                                    {user.user_metadata?.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-sm truncate">{user.user_metadata?.full_name || 'ผู้ใช้'}</p>
+                                    <p className="text-xs text-surface-500 truncate">{user.email}</p>
+                                </div>
+                                <User className="w-4 h-4 text-surface-500" />
+                            </Link>
+                            <button
+                                onClick={signOut}
+                                className="w-full flex items-center gap-3 p-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors"
+                            >
+                                <LogOut className="w-5 h-5" />
+                                <span>ออกจากระบบ</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </>

@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getAuthUserId, unauthorizedResponse } from '@/lib/auth';
 
-// GET - ดึงข้อมูลลูกค้าตาม ID
+// GET - ดึงข้อมูลลูกค้าตาม ID (ของ user ปัจจุบัน)
 export async function GET(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
-        const customer = await prisma.customer.findUnique({
-            where: { id: params.id },
+        const userId = await getAuthUserId();
+        if (!userId) return unauthorizedResponse();
+
+        const customer = await prisma.customer.findFirst({
+            where: { id: params.id, userId },
             include: {
                 quotations: {
                     orderBy: { createdAt: 'desc' },
@@ -44,6 +48,20 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
+        const userId = await getAuthUserId();
+        if (!userId) return unauthorizedResponse();
+
+        // ตรวจสอบว่าเป็นลูกค้าของ user ปัจจุบัน
+        const existing = await prisma.customer.findFirst({
+            where: { id: params.id, userId }
+        });
+        if (!existing) {
+            return NextResponse.json(
+                { error: 'Customer not found' },
+                { status: 404 }
+            );
+        }
+
         const body = await request.json();
         const { name, taxId, address, phone, email } = body;
 
@@ -74,6 +92,20 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
+        const userId = await getAuthUserId();
+        if (!userId) return unauthorizedResponse();
+
+        // ตรวจสอบว่าเป็นลูกค้าของ user ปัจจุบัน
+        const existing = await prisma.customer.findFirst({
+            where: { id: params.id, userId }
+        });
+        if (!existing) {
+            return NextResponse.json(
+                { error: 'Customer not found' },
+                { status: 404 }
+            );
+        }
+
         await prisma.customer.delete({
             where: { id: params.id },
         });

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import Sidebar from '@/components/layout/Sidebar';
+import { AuthProvider } from '@/components/auth/AuthProvider';
+import AuthGuard from '@/components/auth/AuthGuard';
 
 export const metadata: Metadata = {
     title: 'BillWai - ระบบทำบิลและใบเสนอราคา',
@@ -17,16 +19,12 @@ export default function RootLayout({
     return (
         <html lang="th">
             <body className="antialiased">
-                <div className="flex min-h-screen">
-                    <Sidebar />
-                    <main className="flex-1 lg:ml-72 p-4 pt-20 lg:pt-8 lg:p-8">
-                        <div className="max-w-7xl mx-auto">
-                            {children}
-                        </div>
-                    </main>
-                </div>
+                <AuthProvider>
+                    <AuthGuard>
+                        {children}
+                    </AuthGuard>
+                </AuthProvider>
             </body>
         </html>
     );
 }
-

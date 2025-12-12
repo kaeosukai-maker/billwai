@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { generateDocumentNumber } from '@/lib/utils';
+import { getAuthUserId, unauthorizedResponse } from '@/lib/auth';
 
-// GET - ดึงรายการใบเสนอราคาทั้งหมด
+// GET - ดึงรายการใบเสนอราคาทั้งหมด (ของ user ปัจจุบัน)
 export async function GET(request: NextRequest) {
     try {
+        const userId = await getAuthUserId();
+        if (!userId) return unauthorizedResponse();
+
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status');
         const customerId = searchParams.get('customerId');
 
-        const where: Record<string, unknown> = {};
+        const where: Record<string, unknown> = { userId };
         if (status) where.status = status;
         if (customerId) where.customerId = customerId;
 
@@ -35,6 +39,9 @@ export async function GET(request: NextRequest) {
 // POST - สร้างใบเสนอราคาใหม่
 export async function POST(request: NextRequest) {
     try {
+        const userId = await getAuthUserId();
+        if (!userId) return unauthorizedResponse();
+
         const body = await request.json();
         const { customerId, issueDate, validUntil, items, vatRate, notes } = body;
 
@@ -54,6 +61,7 @@ export async function POST(request: NextRequest) {
         // สร้างเลขที่เอกสาร
         const count = await prisma.quotation.count({
             where: {
+                userId,
                 createdAt: {
                     gte: new Date(new Date().getFullYear(), 0, 1),
                 },
@@ -64,6 +72,7 @@ export async function POST(request: NextRequest) {
         // สร้างใบเสนอราคา
         const quotation = await prisma.quotation.create({
             data: {
+                userId,
                 number,
                 customerId,
                 issueDate: new Date(issueDate),
