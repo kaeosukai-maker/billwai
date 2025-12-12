@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Receipt, ArrowLeft, Plus, Trash2, Save, Calculator } from 'lucide-react';
 import { formatCurrency, formatNumber, UNITS, WITHHOLDING_TAX_RATES } from '@/lib/utils';
 import type { Customer, InvoiceItem, Quotation } from '@/types';
 
-export default function NewInvoicePage() {
+function NewInvoiceForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const quotationId = searchParams.get('quotationId');
@@ -110,3 +110,12 @@ export default function NewInvoicePage() {
         </div>
     );
 }
+
+export default function NewInvoicePage() {
+    return (
+        <Suspense fallback={<div className="animate-pulse p-8">กำลังโหลด...</div>}>
+            <NewInvoiceForm />
+        </Suspense>
+    );
+}
+
