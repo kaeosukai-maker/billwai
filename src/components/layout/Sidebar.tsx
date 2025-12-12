@@ -15,6 +15,7 @@ import {
     Sparkles,
     User,
     LogOut,
+    LogIn,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -74,6 +75,27 @@ export default function Sidebar() {
             >
                 {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
+
+            {/* Login Button - Top Right (Mobile & Desktop when not logged in) */}
+            {!user && (
+                <Link
+                    href="/auth/login"
+                    className="fixed top-4 right-4 z-[60] px-4 py-2.5 rounded-xl glass text-white hover:scale-105 transition-transform flex items-center gap-2"
+                >
+                    <LogIn className="w-5 h-5" />
+                    <span className="hidden sm:inline">เข้าสู่ระบบ</span>
+                </Link>
+            )}
+
+            {/* User Avatar - Top Right (when logged in, only on mobile) */}
+            {user && (
+                <Link
+                    href="/profile"
+                    className="lg:hidden fixed top-4 right-4 z-[60] w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-white font-bold hover:scale-105 transition-transform"
+                >
+                    {user.user_metadata?.full_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
+                </Link>
+            )}
 
             {/* Overlay for mobile */}
             {isOpen && (
@@ -173,7 +195,7 @@ export default function Sidebar() {
 
                 {/* User Section */}
                 <div className="p-4 border-t border-white/10">
-                    {user && (
+                    {user ? (
                         <div className="space-y-2">
                             <Link
                                 href="/profile"
@@ -197,6 +219,15 @@ export default function Sidebar() {
                                 <span>ออกจากระบบ</span>
                             </button>
                         </div>
+                    ) : (
+                        <Link
+                            href="/auth/login"
+                            onClick={() => setIsOpen(false)}
+                            className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-violet-500/20 to-purple-500/20 border border-violet-500/30 hover:border-violet-400 transition-colors"
+                        >
+                            <LogIn className="w-5 h-5 text-violet-400" />
+                            <span className="text-sm font-medium">เข้าสู่ระบบ / สมัครสมาชิก</span>
+                        </Link>
                     )}
                 </div>
             </div>

@@ -6,20 +6,13 @@ import { useAuth } from './AuthProvider';
 import Sidebar from '@/components/layout/Sidebar';
 import { Loader2 } from 'lucide-react';
 
-const publicRoutes = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/callback', '/auth/reset-password'];
+const authRoutes = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/callback', '/auth/reset-password'];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-    const { user, loading } = useAuth();
-    const router = useRouter();
+    const { loading } = useAuth();
     const pathname = usePathname();
 
-    const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
-
-    useEffect(() => {
-        if (!loading && !user && !isPublicRoute) {
-            router.push('/auth/login');
-        }
-    }, [user, loading, isPublicRoute, router]);
+    const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
 
     // Show loading spinner while checking auth
     if (loading) {
@@ -33,24 +26,12 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
         );
     }
 
-    // Public routes - no sidebar
-    if (isPublicRoute) {
+    // Auth routes - no sidebar
+    if (isAuthRoute) {
         return <>{children}</>;
     }
 
-    // Protected routes - redirect if not authenticated
-    if (!user) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <Loader2 className="w-12 h-12 animate-spin text-primary-400 mx-auto mb-4" />
-                    <p className="text-surface-400">กำลังนำทาง...</p>
-                </div>
-            </div>
-        );
-    }
-
-    // Authenticated - show sidebar and content
+    // Normal routes - always show with sidebar (no auth required)
     return (
         <div className="flex min-h-screen">
             <Sidebar />
