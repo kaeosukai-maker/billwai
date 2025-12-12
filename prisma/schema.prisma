@@ -1,0 +1,106 @@
+// Prisma Schema สำหรับ Thai Freelancer Billing App
+// Database: SQLite
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ข้อมูลธุรกิจ/ฟรีแลนซ์
+model Business {
+  id          String   @id @default(uuid())
+  name        String   // ชื่อธุรกิจ/ชื่อฟรีแลนซ์
+  taxId       String?  // เลขประจำตัวผู้เสียภาษี
+  address     String?
+  phone       String?
+  email       String?
+  logo        String?  // Base64 หรือ URL
+  bankName    String?
+  bankAccount String?
+  bankAccountName String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ลูกค้า
+model Customer {
+  id         String      @id @default(uuid())
+  name       String
+  taxId      String?
+  address    String?
+  phone      String?
+  email      String?
+  quotations Quotation[]
+  invoices   Invoice[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+// ใบเสนอราคา
+model Quotation {
+  id         String          @id @default(uuid())
+  number     String          @unique // QT-2024-0001
+  customerId String
+  customer   Customer        @relation(fields: [customerId], references: [id])
+  issueDate  DateTime
+  validUntil DateTime
+  items      QuotationItem[]
+  subtotal   Float
+  vatRate    Float           @default(7)
+  vatAmount  Float
+  total      Float
+  notes      String?
+  status     String          @default("draft") // draft, sent, accepted, rejected
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+}
+
+// รายการในใบเสนอราคา
+model QuotationItem {
+  id          String    @id @default(uuid())
+  quotationId String
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float
+  unit        String    @default("รายการ")
+  unitPrice   Float
+  amount      Float
+}
+
+// ใบแจ้งหนี้/บิล
+model Invoice {
+  id             String        @id @default(uuid())
+  number         String        @unique // INV-2024-0001
+  customerId     String
+  customer       Customer      @relation(fields: [customerId], references: [id])
+  quotationId    String?       // อ้างอิงจากใบเสนอราคา (ถ้ามี)
+  issueDate      DateTime
+  dueDate        DateTime
+  items          InvoiceItem[]
+  subtotal       Float
+  vatRate        Float         @default(7)
+  vatAmount      Float
+  withholdingTax Float         @default(0) // ภาษีหัก ณ ที่จ่าย
+  total          Float
+  notes          String?
+  status         String        @default("unpaid") // unpaid, paid, overdue, cancelled
+  paidDate       DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+// รายการในใบแจ้งหนี้
+model InvoiceItem {
+  id          String  @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float
+  unit        String  @default("รายการ")
+  unitPrice   Float
+  amount      Float
+}
