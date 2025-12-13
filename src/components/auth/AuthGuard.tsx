@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from './AuthProvider';
 import Sidebar from '@/components/layout/Sidebar';
@@ -9,7 +8,8 @@ import { Loader2 } from 'lucide-react';
 const authRoutes = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/callback', '/auth/reset-password'];
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-    const { loading } = useAuth();
+    const { user, loading } = useAuth();
+    const router = useRouter();
     const pathname = usePathname();
 
     const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
@@ -28,10 +28,16 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
     // Auth routes - no sidebar
     if (isAuthRoute) {
+        // If already logged in, redirect to home
+        if (user) {
+            router.replace('/');
+            return null;
+        }
         return <>{children}</>;
     }
 
-    // Normal routes - always show with sidebar (no auth required)
+    // All routes accessible with or without login
+    // Show with sidebar regardless of auth status
     return (
         <div className="flex min-h-screen">
             <Sidebar />

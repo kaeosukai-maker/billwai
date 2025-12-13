@@ -52,9 +52,29 @@ export default function SettingsPage() {
     const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            // Validate file size (max 2MB)
+            const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+            if (file.size > MAX_FILE_SIZE) {
+                alert('ไฟล์ใหญ่เกินไป กรุณาเลือกไฟล์ที่มีขนาดไม่เกิน 2MB');
+                e.target.value = ''; // Clear input
+                return;
+            }
+
+            // Validate file type
+            const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+            if (!ALLOWED_TYPES.includes(file.type)) {
+                alert('รองรับเฉพาะไฟล์รูปภาพ (JPEG, PNG, WebP)');
+                e.target.value = ''; // Clear input
+                return;
+            }
+
             const reader = new FileReader();
             reader.onloadend = () => {
                 setFormData({ ...formData, logo: reader.result as string });
+            };
+            reader.onerror = () => {
+                alert('เกิดข้อผิดพลาดในการอ่านไฟล์');
+                e.target.value = ''; // Clear input
             };
             reader.readAsDataURL(file);
         }

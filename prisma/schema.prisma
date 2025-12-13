@@ -66,6 +66,9 @@ model Quotation {
   updatedAt  DateTime        @updatedAt
 
   @@index([userId])
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 // รายการในใบเสนอราคา
@@ -103,6 +106,10 @@ model Invoice {
   updatedAt      DateTime      @updatedAt
 
   @@index([userId])
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([dueDate])
 }
 
 // รายการในใบแจ้งหนี้
