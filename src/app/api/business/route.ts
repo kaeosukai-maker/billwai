@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getOptionalUserId } from '@/lib/auth';
+import { requireAuthUserId, isAuthError } from '@/lib/auth';
+import { BusinessSchema, validateInput } from '@/lib/validation';
 
-// GET - ดึงข้อมูลธุรกิจ
+// GET - ดึงข้อมูลธุรกิจของ user
 export async function GET() {
     try {
-        const userId = await getOptionalUserId();
+        const authResult = await requireAuthUserId();
+        if (isAuthError(authResult)) return authResult;
+        const userId = authResult;
 
-        // ถ้า login แล้วดึงของ user, ถ้าไม่ login ดึงอันแรก (สำหรับ demo)
-        const business = userId
-            ? await prisma.business.findFirst({ where: { userId } })
-            : await prisma.business.findFirst({ orderBy: { createdAt: 'desc' } });
+        const business = await prisma.business.findFirst({
+            where: { userId }
+        });
 
         return NextResponse.json(business || null);
     } catch (error) {
@@ -25,21 +27,27 @@ export async function GET() {
 // POST/PUT - สร้างหรืออัปเดตข้อมูลธุรกิจ
 export async function POST(request: NextRequest) {
     try {
-        const userId = await getOptionalUserId();
-        const body = await request.json();
-        const { name, taxId, address, phone, email, logo, bankName, bankAccount, bankAccountName } = body;
+        const authResult = await requireAuthUserId();
+        if (isAuthError(authResult)) return authResult;
+        const userId = authResult;
 
-        if (!name) {
+        const body = await request.json();
+
+        // Validate input
+        const validation = validateInput(BusinessSchema, body);
+        if (!validation.success) {
             return NextResponse.json(
-                { error: 'Business name is required' },
+                { error: validation.error },
                 { status: 400 }
             );
         }
 
-        // หา business ที่มีอยู่
-        const existingBusiness = userId
-            ? await prisma.business.findFirst({ where: { userId } })
-            : await prisma.business.findFirst({ orderBy: { createdAt: 'desc' } });
+        const { name, taxId, address, phone, email, logo, bankName, bankAccount, bankAccountName } = validation.data;
+
+        // หา business ที่มีอยู่ของ user นี้
+        const existingBusiness = await prisma.business.findFirst({
+            where: { userId }
+        });
 
         let business;
         if (existingBusiness) {
@@ -60,7 +68,7 @@ export async function POST(request: NextRequest) {
         } else {
             business = await prisma.business.create({
                 data: {
-                    userId: userId || 'anonymous',
+                    userId,
                     name,
                     taxId: taxId || null,
                     address: address || null,
